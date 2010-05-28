@@ -2,8 +2,8 @@ package com.mazgi.voicenowtter.android.client;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -28,10 +28,13 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.params.HttpProtocolParams;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
 
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Xml;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -39,9 +42,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 public class Home extends Activity implements OnClickListener {
-	public enum ExtraKeyNames{
-		HOST,PORT,USER,PASS,
-	}
+	public enum ExtraKeyNames{HOST,PORT,USER,PASS,}
 	private EditText tweet;
 	private TextView tweets;
 	private Button tweetButton;
@@ -59,7 +60,7 @@ public class Home extends Activity implements OnClickListener {
 	
 	private HttpClient createHttpClient(int port){
 		HttpParams params=new BasicHttpParams();
-		ConnManagerParams.setMaxTotalConnections(params, 100);
+		ConnManagerParams.setMaxTotalConnections(params, 8);
 		HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
 		SchemeRegistry reg=new SchemeRegistry();
 		reg.register(new Scheme("http",PlainSocketFactory.getSocketFactory(),port));
@@ -74,7 +75,7 @@ public class Home extends Activity implements OnClickListener {
 	}
 	
 	private void createShowMethod(final String host, int port, final String user) throws URISyntaxException{
-		URI uri=new URI("http", null, host, port, "/users/"+user, null, null);
+		URI uri=new URI("http", null, host, port, "/users/"+user+".xml", null, null);
 		showMethod=new HttpGet(uri);
 	}
 	
@@ -91,37 +92,47 @@ public class Home extends Activity implements OnClickListener {
 		loginMethod.setEntity(entity);
 		HttpResponse res=c.execute(loginMethod);
 		if(200!=res.getStatusLine().getStatusCode()) throw new IOException();//TODO:例外の種類検討
-//		BufferedReader reader=new BufferedReader(new InputStreamReader(res.getEntity().getContent()));
-//		String line;
-//		while(null!=(line=reader.readLine())){
-//			//String[] param=line.split("=");
-//			tweets.append(line+"\n");
-//		}
-//		reader.close();
-//		return null;
 	}
 	
 	private void tweet(HttpClient c) throws ClientProtocolException, IOException{
 		String text=tweet.getText().toString();
 		List<NameValuePair> params=new ArrayList<NameValuePair>();
+		params.add(new BasicNameValuePair("commit","Tweet"));
 		params.add(new BasicNameValuePair("status[text]",text));
 		UrlEncodedFormEntity entity=new UrlEncodedFormEntity(params,"UTF-8");
 		tweetMethod.setEntity(entity);
 		HttpResponse res=c.execute(tweetMethod);
-		if(200!=res.getStatusLine().getStatusCode()) throw new IOException();//TODO:例外の種類検討
+		if(200==res.getStatusLine().getStatusCode())return;
+		if(302==res.getStatusLine().getStatusCode())return;
+//		throw new IOException();//TODO:例外の種類検討
+	}
+	
+	private void parseXml(InputStream in, TextView out) throws IOException, XmlPullParserException {
+		XmlPullParser parser = Xml.newPullParser();
+		parser.setInput(in, "UTF-8");
+		int eventType = parser.getEventType();
+		while (eventType != XmlPullParser.END_DOCUMENT) {
+			String tag = null;
+			switch (eventType) {
+				case XmlPullParser.START_TAG:
+					tag = parser.getName();
+					if (tag.equals("text"))
+						out.append(parser.nextText()+"\n");
+					break;
+			}
+			eventType = parser.next();
+		}
 	}
 	
 	private void reload(HttpClient c) throws ClientProtocolException, IOException{
+		tweets.setText("");
 		HttpResponse res=c.execute(showMethod);
 		if(200!=res.getStatusLine().getStatusCode()) throw new IOException();//TODO:例外の種類検討
-		tweets.setText("suc\n");
-		BufferedReader reader=new BufferedReader(new InputStreamReader(res.getEntity().getContent()));
-		String line;
-		while(null!=(line=reader.readLine())){
-			//String[] param=line.split("=");
-			tweets.append(line+"\n");
+		try {
+			parseXml(res.getEntity().getContent(),tweets);
+		} catch (Exception e) {
+			throw new IOException();
 		}
-		reader.close();
 	}
 	
     @Override
