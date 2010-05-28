@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<TableLayout android:id="@+id/TableLayout01" android:layout_width="fill_parent" android:layout_height="fill_parent" xmlns:android="http://schemas.android.com/apk/res/android">
+<TableRow android:id="@+id/TableRow01" android:layout_width="wrap_content" android:layout_height="wrap_content">
+<LinearLayout android:id="@+id/LinearLayout02" android:layout_width="fill_parent" android:layout_height="wrap_content" android:orientation="vertical">
+<TextView android:text="Host :" android:id="@+id/TextView01" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
+<LinearLayout android:id="@+id/LinearLayout01" android:layout_width="wrap_content" android:layout_height="wrap_content">
+<EditText android:text="voicenowtter.heroku.com" android:id="@+id/HostName" android:layout_width="wrap_content" android:layout_height="wrap_content"></EditText>
+<EditText android:text="80" android:id="@+id/Port" android:layout_width="wrap_content" android:layout_height="wrap_content"></EditText>
+</LinearLayout>
+</LinearLayout>
+</TableRow>
+<TableRow android:id="@+id/TableRow02" android:layout_width="wrap_content" android:layout_height="wrap_content">
+<LinearLayout android:id="@+id/LinearLayout02" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical">
+<TextView android:text="User :" android:id="@+id/TextView02" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
+<EditText android:text="guest" android:id="@+id/UserName" android:layout_width="fill_parent" android:layout_height="wrap_content"></EditText>
+</LinearLayout>
+</TableRow>
+<TableRow android:id="@+id/TableRow03" android:layout_width="wrap_content" android:layout_height="wrap_content">
+<LinearLayout android:id="@+id/LinearLayout02" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical">
+<TextView android:text="Pass :" android:id="@+id/TextView03" android:layout_width="wrap_content" android:layout_height="wrap_content"></TextView>
+<EditText android:text="guest" android:id="@+id/Password" android:password="true" android:layout_width="fill_parent" android:layout_height="wrap_content"></EditText>
+</LinearLayout>
+</TableRow>
+<TableRow android:id="@+id/TableRow04" android:layout_width="wrap_content" android:layout_height="wrap_content">
+<Button android:text="Login" android:id="@+id/LoginButton" android:layout_width="wrap_content" android:layout_height="wrap_content"></Button>
+</TableRow>
+</TableLayout>
