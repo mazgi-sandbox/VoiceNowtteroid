@@ -15,6 +15,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.params.ConnManagerParams;
@@ -41,68 +42,86 @@ public class Home extends Activity implements OnClickListener {
 	public enum ExtraKeyNames{
 		HOST,PORT,USER,PASS,
 	}
-	private TextView tweet;
+	private EditText tweet;
 	private TextView tweets;
 	private Button tweetButton;
 	private HttpClient client;
-	private String token;
+	private HttpPost loginMethod;
+	private HttpGet showMethod;
+	private HttpPost tweetMethod;
 
 	private void initWidgets(){
-		tweet=(TextView) this.findViewById(R.id.TweetText);
+		tweet=(EditText) this.findViewById(R.id.TweetText);
 		tweets=(TextView) this.findViewById(R.id.Tweets);
 		tweetButton=(Button) this.findViewById(R.id.TweetButton);
 		tweetButton.setOnClickListener(this);
 	}
 	
-	private HttpClient createHttpClient(){
-		Intent i=this.getIntent();
-		int port=i.getIntExtra(ExtraKeyNames.PORT.name(), 80);
-			
+	private HttpClient createHttpClient(int port){
 		HttpParams params=new BasicHttpParams();
 		ConnManagerParams.setMaxTotalConnections(params, 100);
 		HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
 		SchemeRegistry reg=new SchemeRegistry();
 		reg.register(new Scheme("http",PlainSocketFactory.getSocketFactory(),port));
 		ClientConnectionManager conMan=new ThreadSafeClientConnManager(params,reg);
-		
 		HttpClient c=new DefaultHttpClient(conMan,params);
 		return c;
 	}
 	
-	private String login(final HttpClient c) throws URISyntaxException, ClientProtocolException, IOException{
-		Intent i=this.getIntent();
-		String host=i.getStringExtra(ExtraKeyNames.HOST.name());
-		int port=i.getIntExtra(ExtraKeyNames.PORT.name(), 80);
-		String user=i.getStringExtra(ExtraKeyNames.USER.name());
-		String pass=i.getStringExtra(ExtraKeyNames.PASS.name());
-		
+	private void createLoginMethod(final String host, int port) throws URISyntaxException{
 		URI uri=new URI("http", null, host, port, "/auth/login", null, null);
-		HttpPost loginMethod=new HttpPost(uri);
-		
+		loginMethod=new HttpPost(uri);
+	}
+	
+	private void createShowMethod(final String host, int port, final String user) throws URISyntaxException{
+		URI uri=new URI("http", null, host, port, "/users/"+user, null, null);
+		showMethod=new HttpGet(uri);
+	}
+	
+	private void createTweetMethod(String host, int port) throws URISyntaxException{
+		URI uri=new URI("http", null, host, port, "/statuses", null, null);
+		tweetMethod=new HttpPost(uri);
+	}
+	
+	private void login(HttpClient c, String user, String pass) throws URISyntaxException, ClientProtocolException, IOException{
 		List<NameValuePair> params=new ArrayList<NameValuePair>();
 		params.add(new BasicNameValuePair("name",user));
 		params.add(new BasicNameValuePair("password",pass));
 		UrlEncodedFormEntity entity=new UrlEncodedFormEntity(params,"UTF-8");
 		loginMethod.setEntity(entity);
-		tweets.append(entity.toString()+"\n");
-		
 		HttpResponse res=c.execute(loginMethod);
-		if(200!=res.getStatusLine().getStatusCode())
-			throw new IOException();//TODO:例外の種類検討
-		
-		BufferedReader reader=new BufferedReader(
-				new InputStreamReader(
-						res.getEntity().getContent()));
-		
-		//authenticity_token	RE902v7nHrVqPMjR1cuvMVTd/7E3Ax48Jofk8bgzcbc=
+		if(200!=res.getStatusLine().getStatusCode()) throw new IOException();//TODO:例外の種類検討
+//		BufferedReader reader=new BufferedReader(new InputStreamReader(res.getEntity().getContent()));
+//		String line;
+//		while(null!=(line=reader.readLine())){
+//			//String[] param=line.split("=");
+//			tweets.append(line+"\n");
+//		}
+//		reader.close();
+//		return null;
+	}
+	
+	private void tweet(HttpClient c) throws ClientProtocolException, IOException{
+		String text=tweet.getText().toString();
+		List<NameValuePair> params=new ArrayList<NameValuePair>();
+		params.add(new BasicNameValuePair("status[text]",text));
+		UrlEncodedFormEntity entity=new UrlEncodedFormEntity(params,"UTF-8");
+		tweetMethod.setEntity(entity);
+		HttpResponse res=c.execute(tweetMethod);
+		if(200!=res.getStatusLine().getStatusCode()) throw new IOException();//TODO:例外の種類検討
+	}
+	
+	private void reload(HttpClient c) throws ClientProtocolException, IOException{
+		HttpResponse res=c.execute(showMethod);
+		if(200!=res.getStatusLine().getStatusCode()) throw new IOException();//TODO:例外の種類検討
+		tweets.setText("suc\n");
+		BufferedReader reader=new BufferedReader(new InputStreamReader(res.getEntity().getContent()));
 		String line;
 		while(null!=(line=reader.readLine())){
 			//String[] param=line.split("=");
 			tweets.append(line+"\n");
 		}
 		reader.close();
-		
-		return null;
 	}
 	
     @Override
@@ -111,19 +130,27 @@ public class Home extends Activity implements OnClickListener {
         setContentView(R.layout.home);
         
         initWidgets();        
-        client=createHttpClient();
+        
+		Intent i=this.getIntent();
+		String host=i.getStringExtra(ExtraKeyNames.HOST.name());
+		int port=i.getIntExtra(ExtraKeyNames.PORT.name(), 80);
+		String user=i.getStringExtra(ExtraKeyNames.USER.name());
+		String pass=i.getStringExtra(ExtraKeyNames.PASS.name());
+        
+        client=createHttpClient(port);
         try {
-			login(client);
+			createLoginMethod(host, port);
+			createShowMethod(host, port, user);
+			createTweetMethod(host, port);
+			login(client, user, pass);
+			reload(client);
 		} catch (ClientProtocolException e) {
-			// TODO 自動生成された catch ブロック
 			e.printStackTrace();
 			tweets.append(e.getMessage()+"\n");
 		} catch (URISyntaxException e) {
-			// TODO 自動生成された catch ブロック
 			e.printStackTrace();
 			tweets.append(e.getMessage()+"\n");
 		} catch (IOException e) {
-			// TODO 自動生成された catch ブロック
 			e.printStackTrace();
 			tweets.append(e.getMessage()+"\n");
 		}
@@ -133,6 +160,18 @@ public class Home extends Activity implements OnClickListener {
 	public void onClick(View v) {
 		switch(v.getId()){
 		case R.id.TweetButton:
+			try {
+				tweet(client);
+				reload(client);
+			} catch (ClientProtocolException e) {
+				// TODO 自動生成された catch ブロック
+				e.printStackTrace();
+				tweets.setText(e.getMessage()+"\n");
+			} catch (IOException e) {
+				// TODO 自動生成された catch ブロック
+				e.printStackTrace();
+				tweets.setText(e.getMessage()+"\n");
+			}
 			break;
 		}
 	}
