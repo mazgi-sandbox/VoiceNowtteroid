@@ -1,9 +1,7 @@
 package com.mazgi.voicenowtter.android.client;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -33,6 +31,9 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Xml;
 import android.view.View;
@@ -41,7 +42,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-public class Home extends Activity implements OnClickListener {
+public class Home extends Activity implements OnClickListener, LocationListener {
 	public enum ExtraKeyNames{HOST,PORT,USER,PASS,}
 	private EditText tweet;
 	private TextView tweets;
@@ -50,6 +51,9 @@ public class Home extends Activity implements OnClickListener {
 	private HttpPost loginMethod;
 	private HttpGet showMethod;
 	private HttpPost tweetMethod;
+	
+	private LocationManager locationManager;
+	private Location location;
 
 	private void initWidgets(){
 		tweet=(EditText) this.findViewById(R.id.TweetText);
@@ -95,10 +99,18 @@ public class Home extends Activity implements OnClickListener {
 	}
 	
 	private void tweet(HttpClient c) throws ClientProtocolException, IOException{
+		
+		String geo_tag=
+			String.valueOf(location.getLatitude())
+			+":"+String.valueOf(location.getLongitude());
+		
 		String text=tweet.getText().toString();
 		List<NameValuePair> params=new ArrayList<NameValuePair>();
 		params.add(new BasicNameValuePair("commit","Tweet"));
 		params.add(new BasicNameValuePair("status[text]",text));
+		
+		params.add(new BasicNameValuePair("status[geo_tag]",geo_tag));
+		
 		UrlEncodedFormEntity entity=new UrlEncodedFormEntity(params,"UTF-8");
 		tweetMethod.setEntity(entity);
 		HttpResponse res=c.execute(tweetMethod);
@@ -118,6 +130,8 @@ public class Home extends Activity implements OnClickListener {
 					tag = parser.getName();
 					if (tag.equals("text"))
 						out.append(parser.nextText()+"\n");
+					if (tag.equals("geo_tag"))
+						out.append("tag:"+parser.nextText()+"\n");
 					break;
 			}
 			eventType = parser.next();
@@ -148,6 +162,10 @@ public class Home extends Activity implements OnClickListener {
 		String user=i.getStringExtra(ExtraKeyNames.USER.name());
 		String pass=i.getStringExtra(ExtraKeyNames.PASS.name());
         
+		
+		locationManager=(LocationManager) getSystemService(LOCATION_SERVICE);
+		location=locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+		
         client=createHttpClient(port);
         try {
 			createLoginMethod(host, port);
@@ -175,15 +193,51 @@ public class Home extends Activity implements OnClickListener {
 				tweet(client);
 				reload(client);
 			} catch (ClientProtocolException e) {
-				// TODO 自動生成された catch ブロック
 				e.printStackTrace();
-				tweets.setText(e.getMessage()+"\n");
+				tweets.setText(e.toString()+":"+e.getMessage()+"\n");
 			} catch (IOException e) {
-				// TODO 自動生成された catch ブロック
 				e.printStackTrace();
-				tweets.setText(e.getMessage()+"\n");
+				tweets.setText(e.toString()+":"+e.getMessage()+"\n");
 			}
 			break;
 		}
+	}
+
+	 @Override
+    protected void onResume() {
+        if (locationManager != null) 
+            locationManager.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER, 0, 0, this);
+        super.onResume();
+    }
+    
+    @Override
+    protected void onPause() {
+        if (locationManager != null)
+            locationManager.removeUpdates(this);
+        super.onPause();
+    }
+	
+	@Override
+	public void onLocationChanged(Location l) {
+		location=l;
+	}
+
+	@Override
+	public void onProviderDisabled(String provider) {
+		// TODO 自動生成されたメソッド・スタブ
+		
+	}
+
+	@Override
+	public void onProviderEnabled(String provider) {
+		// TODO 自動生成されたメソッド・スタブ
+		
+	}
+
+	@Override
+	public void onStatusChanged(String provider, int status, Bundle extras) {
+		// TODO 自動生成されたメソッド・スタブ
+		
 	}
 }

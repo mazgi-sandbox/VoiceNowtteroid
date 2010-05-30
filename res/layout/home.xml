@@ -4,7 +4,7 @@
   android:orientation="vertical"
   android:layout_width="fill_parent"
   android:layout_height="fill_parent">
-<EditText android:text="test" android:id="@+id/TweetText" android:layout_width="fill_parent" android:layout_height="wrap_content"></EditText>
+<EditText android:text="＼あんどろいど／" android:id="@+id/TweetText" android:layout_width="fill_parent" android:layout_height="wrap_content"></EditText>
 <Button android:text="Tweet" android:id="@+id/TweetButton" android:layout_width="fill_parent" android:layout_height="wrap_content"></Button>
 <TextView android:text="no result." android:id="@+id/Tweets" android:layout_width="fill_parent" android:layout_height="wrap_content"></TextView>
 </LinearLayout>
